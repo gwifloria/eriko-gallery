@@ -4,7 +4,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Original image formats (only AVIF will be committed)
+# Original image formats (only AVIF and WebP will be committed)
 *.jpg
 *.jpeg
 *.png

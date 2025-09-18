@@ -42,12 +42,16 @@ async function walkDirectory(dir) {
   return imagesToProcess;
 }
 
-async function convertToAvif(sourcePath) {
+async function convertImage(sourcePath) {
   const dir = path.dirname(sourcePath);
   const name = path.basename(sourcePath, path.extname(sourcePath));
   const avifPath = path.join(dir, `${name}.avif`);
+  const webpPath = path.join(dir, `${name}.webp`);
+
+  const convertedFiles = [];
 
   try {
+    // 转换为 AVIF 格式 (主要格式，最佳压缩比)
     await sharp(sourcePath)
       .avif({
         quality: 65,  // 稍高的质量设置
@@ -55,12 +59,28 @@ async function convertToAvif(sourcePath) {
       })
       .toFile(avifPath);
 
-    console.log(`✅ 转换成功: ${sourcePath} → ${avifPath}`);
-    return avifPath;
+    console.log(`✅ AVIF 转换成功: ${sourcePath} → ${avifPath}`);
+    convertedFiles.push(avifPath);
   } catch (error) {
-    console.error(`❌ 转换失败 ${sourcePath}: ${error.message}`);
-    return null;
+    console.error(`❌ AVIF 转换失败 ${sourcePath}: ${error.message}`);
   }
+
+  try {
+    // 转换为 WebP 格式 (fallback，广泛兼容)
+    await sharp(sourcePath)
+      .webp({
+        quality: 75,  // WebP 使用稍高质量以保证兼容性
+        effort: 6
+      })
+      .toFile(webpPath);
+
+    console.log(`✅ WebP 转换成功: ${sourcePath} → ${webpPath}`);
+    convertedFiles.push(webpPath);
+  } catch (error) {
+    console.error(`❌ WebP 转换失败 ${sourcePath}: ${error.message}`);
+  }
+
+  return convertedFiles;
 }
 
 async function addToGit(filePath) {
@@ -95,23 +115,21 @@ async function main() {
 
   // 转换所有图片
   for (const imagePath of imagesToProcess) {
-    const avifPath = await convertToAvif(imagePath);
-    if (avifPath) {
-      convertedFiles.push(avifPath);
-    }
+    const newFiles = await convertImage(imagePath);
+    convertedFiles.push(...newFiles);
   }
 
-  // 将转换后的 AVIF 文件添加到 Git
+  // 将转换后的文件添加到 Git
   if (convertedFiles.length > 0) {
-    console.log(`\n📝 将 ${convertedFiles.length} 个 AVIF 文件添加到 Git...`);
-    for (const avifPath of convertedFiles) {
-      await addToGit(avifPath);
+    console.log(`\n📝 将 ${convertedFiles.length} 个优化文件添加到 Git...`);
+    for (const filePath of convertedFiles) {
+      await addToGit(filePath);
     }
   }
 
   console.log("\n🎉 图片优化完成！");
   console.log(`✅ 成功转换: ${convertedFiles.length} 个文件`);
-  console.log("💡 原始图片文件已被 .gitignore 排除，只有 AVIF 文件会被提交");
+  console.log("💡 原始图片文件已被 .gitignore 排除，只有 AVIF 和 WebP 文件会被提交");
 }
 
 // 运行主函数
