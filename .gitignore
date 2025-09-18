@@ -1,0 +1,23 @@
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Original image formats (only AVIF will be committed)
+*.jpg
+*.jpeg
+*.png
+*.JPG
+*.JPEG
+*.PNG
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log

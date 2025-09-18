@@ -1,0 +1,19 @@
+{
+  "name": "floria-gallery",
+  "version": "1.0.0",
+  "description": "Photo gallery with automatic image optimization",
+  "type": "module",
+  "scripts": {
+    "optimize": "node scripts/optimize-images.js",
+    "prepare": "husky install"
+  },
+  "dependencies": {
+    "sharp": "^0.33.0"
+  },
+  "devDependencies": {
+    "husky": "^8.0.3"
+  },
+  "keywords": ["image", "optimization", "avif", "gallery"],
+  "author": "",
+  "license": "MIT"
+}
