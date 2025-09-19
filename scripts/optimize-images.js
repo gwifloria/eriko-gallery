@@ -77,6 +77,7 @@ async function convertImage(sourcePath) {
   const avifPath = path.join(IMAGES_DIR, `${name}.avif`);
 
   const convertedFiles = [];
+  let conversionSuccess = false;
 
   try {
     // 确保输出目录存在
@@ -92,8 +93,19 @@ async function convertImage(sourcePath) {
 
     console.log(`✅ AVIF 转换成功: ${sourcePath} → ${avifPath}`);
     convertedFiles.push(avifPath);
+    conversionSuccess = true;
   } catch (error) {
     console.error(`❌ AVIF 转换失败 ${sourcePath}: ${error.message}`);
+  }
+
+  // 如果转换成功，删除源文件
+  if (conversionSuccess) {
+    try {
+      await unlink(sourcePath);
+      console.log(`🗑️  已删除源文件: ${sourcePath}`);
+    } catch (error) {
+      console.warn(`⚠️  无法删除源文件 ${sourcePath}: ${error.message}`);
+    }
   }
 
   return convertedFiles;
@@ -156,7 +168,7 @@ async function main() {
 
   console.log("\n🎉 图片优化完成！");
   console.log(`✅ 成功转换: ${convertedFiles.length} 个文件`);
-  console.log("💡 原始图片保留在 origin/ 目录，只有优化后的 AVIF 文件会被提交");
+  console.log("💡 源文件已删除，只有优化后的 AVIF 文件会被提交");
 }
 
 // 运行主函数
