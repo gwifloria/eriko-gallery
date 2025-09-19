@@ -8,13 +8,7 @@ yarn-error.log*
 origin/
 
 # Note: Source images are stored in origin/ directory locally
-# Only optimized AVIF files in images/ directory are committed
-
-# Image formats in other locations (only AVIF files are committed)
-*.jpg
-*.jpeg
-*.png
-*.webp
+# Optimized files in images/ directory keep original names but are AVIF format
 
 # macOS
 .DS_Store
