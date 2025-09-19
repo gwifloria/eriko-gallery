@@ -5,7 +5,13 @@ yarn-debug.log*
 yarn-error.log*
 
 # Note: Original images will be processed and then removed automatically
-# Only optimized AVIF and WebP files will remain in the repository
+# Only optimized AVIF files will remain in the repository
+
+# Image formats (only AVIF files are committed)
+*.jpg
+*.jpeg
+*.png
+*.webp
 
 # macOS
 .DS_Store
