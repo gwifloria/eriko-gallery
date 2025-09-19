@@ -50,16 +50,15 @@ async function walkDirectory(dir) {
       } else {
         const ext = path.extname(entry.name).toLowerCase();
         if (SUPPORTED_EXTS.has(ext)) {
-          // 检查是否已经有对应的优化文件
-          const name = path.basename(entry.name, ext);
-          const avifPath = path.join(IMAGES_DIR, `${name}.avif`);
+          // 检查是否已经有对应的优化文件（同名文件）
+          const optimizedPath = path.join(IMAGES_DIR, entry.name);
 
           try {
-            await access(avifPath);
-            // 如果 AVIF 文件已存在，跳过处理
+            await access(optimizedPath);
+            // 如果同名优化文件已存在，跳过处理
             continue;
           } catch {
-            // AVIF 文件不存在，需要处理
+            // 优化文件不存在，需要处理
             imagesToProcess.push(fullPath);
           }
         }
@@ -73,8 +72,8 @@ async function walkDirectory(dir) {
 }
 
 async function convertImage(sourcePath) {
-  const name = path.basename(sourcePath, path.extname(sourcePath));
-  const avifPath = path.join(IMAGES_DIR, `${name}.avif`);
+  const originalName = path.basename(sourcePath);
+  const avifPath = path.join(IMAGES_DIR, originalName);
 
   const convertedFiles = [];
   let conversionSuccess = false;
@@ -91,7 +90,7 @@ async function convertImage(sourcePath) {
       })
       .toFile(avifPath);
 
-    console.log(`✅ AVIF 转换成功: ${sourcePath} → ${avifPath}`);
+    console.log(`✅ 转换成功 (AVIF格式): ${sourcePath} → ${avifPath}`);
     convertedFiles.push(avifPath);
     conversionSuccess = true;
   } catch (error) {
@@ -168,7 +167,7 @@ async function main() {
 
   console.log("\n🎉 图片优化完成！");
   console.log(`✅ 成功转换: ${convertedFiles.length} 个文件`);
-  console.log("💡 源文件已删除，只有优化后的 AVIF 文件会被提交");
+  console.log("💡 源文件已删除，优化文件保持原文件名但为 AVIF 格式");
 }
 
 // 运行主函数
