@@ -4,6 +4,7 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import sharp from "sharp";
 
+const ORIGIN_DIR = path.resolve("origin");
 const IMAGES_DIR = path.resolve("images");
 const SUPPORTED_EXTS = new Set([".jpg", ".jpeg", ".png"]);
 
@@ -26,7 +27,7 @@ function getStagedImageFiles() {
 
     return stagedFiles.filter(file => {
       const ext = path.extname(file).toLowerCase();
-      return SUPPORTED_EXTS.has(ext) && file.startsWith(IMAGES_DIR);
+      return SUPPORTED_EXTS.has(ext) && file.startsWith(ORIGIN_DIR);
     });
   } catch (error) {
     console.warn('⚠️  无法获取 staged 文件，fallback 到扫描全部图片');
@@ -51,16 +52,14 @@ async function walkDirectory(dir) {
         if (SUPPORTED_EXTS.has(ext)) {
           // 检查是否已经有对应的优化文件
           const name = path.basename(entry.name, ext);
-          const avifPath = path.join(dir, `${name}.avif`);
-          const webpPath = path.join(dir, `${name}.webp`);
+          const avifPath = path.join(IMAGES_DIR, `${name}.avif`);
 
           try {
             await access(avifPath);
-            await access(webpPath);
-            // 如果两个优化文件都存在，跳过处理
+            // 如果 AVIF 文件已存在，跳过处理
             continue;
           } catch {
-            // 至少有一个优化文件不存在，需要处理
+            // AVIF 文件不存在，需要处理
             imagesToProcess.push(fullPath);
           }
         }
@@ -74,16 +73,16 @@ async function walkDirectory(dir) {
 }
 
 async function convertImage(sourcePath) {
-  const dir = path.dirname(sourcePath);
   const name = path.basename(sourcePath, path.extname(sourcePath));
-  const avifPath = path.join(dir, `${name}.avif`);
-  const webpPath = path.join(dir, `${name}.webp`);
+  const avifPath = path.join(IMAGES_DIR, `${name}.avif`);
 
   const convertedFiles = [];
-  let conversionSuccess = false;
 
   try {
-    // 转换为 AVIF 格式 (主要格式，最佳压缩比)
+    // 确保输出目录存在
+    await mkdir(IMAGES_DIR, { recursive: true });
+
+    // 转换为 AVIF 格式 (最佳压缩比)
     await sharp(sourcePath)
       .avif({
         quality: 65,  // 稍高的质量设置
@@ -93,35 +92,8 @@ async function convertImage(sourcePath) {
 
     console.log(`✅ AVIF 转换成功: ${sourcePath} → ${avifPath}`);
     convertedFiles.push(avifPath);
-    conversionSuccess = true;
   } catch (error) {
     console.error(`❌ AVIF 转换失败 ${sourcePath}: ${error.message}`);
-  }
-
-  try {
-    // 转换为 WebP 格式 (fallback，广泛兼容)
-    await sharp(sourcePath)
-      .webp({
-        quality: 75,  // WebP 使用稍高质量以保证兼容性
-        effort: 6
-      })
-      .toFile(webpPath);
-
-    console.log(`✅ WebP 转换成功: ${sourcePath} → ${webpPath}`);
-    convertedFiles.push(webpPath);
-    conversionSuccess = true;
-  } catch (error) {
-    console.error(`❌ WebP 转换失败 ${sourcePath}: ${error.message}`);
-  }
-
-  // 如果至少有一个格式转换成功，删除原图
-  if (conversionSuccess) {
-    try {
-      await unlink(sourcePath);
-      console.log(`🗑️  已删除原图: ${sourcePath}`);
-    } catch (error) {
-      console.warn(`⚠️  无法删除原图 ${sourcePath}: ${error.message}`);
-    }
   }
 
   return convertedFiles;
@@ -139,9 +111,9 @@ async function addToGit(filePath) {
 async function main() {
   console.log("🖼️  开始图片优化...");
 
-  // 检查 images 目录是否存在
-  if (!(await dirExists(IMAGES_DIR))) {
-    console.log("📁 images/ 目录不存在，跳过图片优化");
+  // 检查 origin 目录是否存在
+  if (!(await dirExists(ORIGIN_DIR))) {
+    console.log("📁 origin/ 目录不存在，跳过图片优化");
     return;
   }
 
@@ -153,9 +125,9 @@ async function main() {
     console.log(`📋 检测到 ${stagedImages.length} 个 staged 图片文件`);
     imagesToProcess = stagedImages;
   } else {
-    console.log("🔍 扫描 images/ 目录中需要处理的图片...");
+    console.log("🔍 扫描 origin/ 目录中需要处理的图片...");
     // Fallback 到扫描全部图片（跳过已优化的）
-    imagesToProcess = await walkDirectory(IMAGES_DIR);
+    imagesToProcess = await walkDirectory(ORIGIN_DIR);
   }
 
   if (imagesToProcess.length === 0) {
@@ -184,7 +156,7 @@ async function main() {
 
   console.log("\n🎉 图片优化完成！");
   console.log(`✅ 成功转换: ${convertedFiles.length} 个文件`);
-  console.log("💡 原始图片已删除，只有优化后的 AVIF 和 WebP 文件会被提交");
+  console.log("💡 原始图片保留在 origin/ 目录，只有优化后的 AVIF 文件会被提交");
 }
 
 // 运行主函数

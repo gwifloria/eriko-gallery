@@ -4,10 +4,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Note: Original images will be processed and then removed automatically
-# Only optimized AVIF files will remain in the repository
+# Source files directory (not committed to save space)
+origin/
 
-# Image formats (only AVIF files are committed)
+# Note: Source images are stored in origin/ directory locally
+# Only optimized AVIF files in images/ directory are committed
+
+# Image formats in other locations (only AVIF files are committed)
 *.jpg
 *.jpeg
 *.png
