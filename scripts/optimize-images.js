@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, readdir, access } from "node:fs/promises";
+import { mkdir, readdir, access, unlink } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import sharp from "sharp";
@@ -13,6 +13,24 @@ async function dirExists(dir) {
     return true;
   } catch {
     return false;
+  }
+}
+
+// 获取 git staged 的图片文件
+function getStagedImageFiles() {
+  try {
+    const stagedFiles = execSync('git diff --cached --name-only', { encoding: 'utf8' })
+      .split('\n')
+      .filter(Boolean)
+      .map(file => path.resolve(file));
+
+    return stagedFiles.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return SUPPORTED_EXTS.has(ext) && file.startsWith(IMAGES_DIR);
+    });
+  } catch (error) {
+    console.warn('⚠️  无法获取 staged 文件，fallback 到扫描全部图片');
+    return null;
   }
 }
 
@@ -31,7 +49,20 @@ async function walkDirectory(dir) {
       } else {
         const ext = path.extname(entry.name).toLowerCase();
         if (SUPPORTED_EXTS.has(ext)) {
-          imagesToProcess.push(fullPath);
+          // 检查是否已经有对应的优化文件
+          const name = path.basename(entry.name, ext);
+          const avifPath = path.join(dir, `${name}.avif`);
+          const webpPath = path.join(dir, `${name}.webp`);
+
+          try {
+            await access(avifPath);
+            await access(webpPath);
+            // 如果两个优化文件都存在，跳过处理
+            continue;
+          } catch {
+            // 至少有一个优化文件不存在，需要处理
+            imagesToProcess.push(fullPath);
+          }
         }
       }
     }
@@ -49,6 +80,7 @@ async function convertImage(sourcePath) {
   const webpPath = path.join(dir, `${name}.webp`);
 
   const convertedFiles = [];
+  let conversionSuccess = false;
 
   try {
     // 转换为 AVIF 格式 (主要格式，最佳压缩比)
@@ -61,6 +93,7 @@ async function convertImage(sourcePath) {
 
     console.log(`✅ AVIF 转换成功: ${sourcePath} → ${avifPath}`);
     convertedFiles.push(avifPath);
+    conversionSuccess = true;
   } catch (error) {
     console.error(`❌ AVIF 转换失败 ${sourcePath}: ${error.message}`);
   }
@@ -76,8 +109,19 @@ async function convertImage(sourcePath) {
 
     console.log(`✅ WebP 转换成功: ${sourcePath} → ${webpPath}`);
     convertedFiles.push(webpPath);
+    conversionSuccess = true;
   } catch (error) {
     console.error(`❌ WebP 转换失败 ${sourcePath}: ${error.message}`);
+  }
+
+  // 如果至少有一个格式转换成功，删除原图
+  if (conversionSuccess) {
+    try {
+      await unlink(sourcePath);
+      console.log(`🗑️  已删除原图: ${sourcePath}`);
+    } catch (error) {
+      console.warn(`⚠️  无法删除原图 ${sourcePath}: ${error.message}`);
+    }
   }
 
   return convertedFiles;
@@ -101,20 +145,31 @@ async function main() {
     return;
   }
 
-  // 扫描所有需要处理的图片
-  const imagesToProcess = await walkDirectory(IMAGES_DIR);
+  // 优先检查 staged 的图片文件
+  const stagedImages = getStagedImageFiles();
+  let imagesToProcess;
+
+  if (stagedImages && stagedImages.length > 0) {
+    console.log(`📋 检测到 ${stagedImages.length} 个 staged 图片文件`);
+    imagesToProcess = stagedImages;
+  } else {
+    console.log("🔍 扫描 images/ 目录中需要处理的图片...");
+    // Fallback 到扫描全部图片（跳过已优化的）
+    imagesToProcess = await walkDirectory(IMAGES_DIR);
+  }
 
   if (imagesToProcess.length === 0) {
     console.log("✨ 没有发现需要处理的图片文件");
     return;
   }
 
-  console.log(`📊 发现 ${imagesToProcess.length} 个图片文件需要处理`);
+  console.log(`📊 准备处理 ${imagesToProcess.length} 个图片文件`);
 
   const convertedFiles = [];
 
   // 转换所有图片
   for (const imagePath of imagesToProcess) {
+    console.log(`\n🔄 处理: ${path.relative(process.cwd(), imagePath)}`);
     const newFiles = await convertImage(imagePath);
     convertedFiles.push(...newFiles);
   }
@@ -129,7 +184,7 @@ async function main() {
 
   console.log("\n🎉 图片优化完成！");
   console.log(`✅ 成功转换: ${convertedFiles.length} 个文件`);
-  console.log("💡 原始图片文件已被 .gitignore 排除，只有 AVIF 和 WebP 文件会被提交");
+  console.log("💡 原始图片已删除，只有优化后的 AVIF 和 WebP 文件会被提交");
 }
 
 // 运行主函数

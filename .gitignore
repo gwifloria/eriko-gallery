@@ -4,13 +4,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Original image formats (only AVIF and WebP will be committed)
-*.jpg
-*.jpeg
-*.png
-*.JPG
-*.JPEG
-*.PNG
+# Note: Original images will be processed and then removed automatically
+# Only optimized AVIF and WebP files will remain in the repository
 
 # macOS
 .DS_Store
