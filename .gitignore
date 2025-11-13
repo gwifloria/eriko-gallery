@@ -10,11 +10,12 @@ origin/
 # Note: Source images are stored in origin/ directory locally
 # Only optimized AVIF files in images/ directory are committed
 
-# Image formats in other locations (only AVIF files are committed)
-*.jpg
-*.jpeg
+# Media formats in other locations (only AVIF and MP4 files are committed)
 *.png
 *.webp
+*.heic
+*.heif
+*.mov
 
 # macOS
 .DS_Store
