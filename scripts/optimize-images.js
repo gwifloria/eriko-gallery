@@ -130,6 +130,7 @@ async function convertImage(sourcePath) {
 
     // 转换为 AVIF 格式 (最佳压缩比)
     await sharp(inputPath)
+      .rotate()  // 自动根据 EXIF 方向旋转图片
       .avif({
         quality: 65,  // 稍高的质量设置
         effort: 6     // 更好的压缩效果
