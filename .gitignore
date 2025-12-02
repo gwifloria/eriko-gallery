@@ -16,6 +16,7 @@ origin/
 *.heic
 *.heif
 *.mov
+*.cr3
 
 # macOS
 .DS_Store

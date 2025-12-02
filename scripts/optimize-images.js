@@ -7,7 +7,7 @@ import ffmpeg from "fluent-ffmpeg";
 
 const ORIGIN_DIR = path.resolve("origin");
 const IMAGES_DIR = path.resolve("images");
-const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".heic", ".heif"]);
+const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".heic", ".heif", ".cr3"]);
 const VIDEO_EXTS = new Set([".mov"]);
 
 async function dirExists(dir) {
@@ -125,6 +125,20 @@ async function convertImage(sourcePath) {
       } catch (sipsError) {
         console.error(`❌ HEIC 预处理失败: ${sipsError.message}`);
         throw sipsError;
+      }
+    }
+
+    // 对于 CR3 RAW 文件，使用 ImageMagick 转换为 16-bit PNG
+    if (ext === '.cr3') {
+      tempFile = path.join('/tmp', `temp_${name}_${Date.now()}.png`);
+      try {
+        execSync(`magick convert "${sourcePath}" -depth 16 "${tempFile}"`, { stdio: 'pipe' });
+        console.log(`🔄 CR3 → PNG (16-bit): ${sourcePath}`);
+        inputPath = tempFile;
+      } catch (magickError) {
+        console.error(`❌ CR3 预处理失败: ${magickError.message}`);
+        console.error(`💡 请确保已安装 ImageMagick: brew install imagemagick`);
+        throw magickError;
       }
     }
 
